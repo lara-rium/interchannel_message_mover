@@ -4,12 +4,13 @@ use sparkle_convenience::{
     interaction::{extract::InteractionExt, InteractionHandle},
     Bot,
 };
-use twilight_model::application::interaction::Interaction;
+use twilight_model::application::interaction::{Interaction, InteractionType};
 
-use crate::{err_reply, Context, CustomError, Error, TEST_GUILD_ID};
+use crate::{err_reply, Context, CustomError, Error};
 
 mod channel_select_menu;
 mod message_command;
+mod modal;
 mod move_channel_select;
 mod move_message;
 mod move_message_and_below;
@@ -22,6 +23,9 @@ struct InteractionContext<'ctx> {
 
 impl<'ctx> InteractionContext<'ctx> {
     async fn handle(self) -> Result<()> {
+        if self.interaction.kind == InteractionType::ModalSubmit {
+            return self.handle_modal_submit().await;
+        }
         match self.interaction.name().ok()? {
             move_message::NAME => self.handle_move_message_command().await,
             move_message_and_below::NAME => self.handle_move_message_and_below_command().await,
@@ -36,9 +40,6 @@ pub async fn set_commands(bot: &Bot) -> Result<()> {
 
     bot.interaction_client()
         .set_global_commands(commands)
-        .await?;
-    bot.interaction_client()
-        .set_guild_commands(TEST_GUILD_ID, commands)
         .await?;
 
     Ok(())
